@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3D6B4F">
+<title>繁殖巡回 記録ノート</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{
+  --bg:#F3F5EE;
+  --surface:#FFFFFF;
+  --surface-2:#EAEFE4;
+  --ink:#1F2C24;
+  --ink-soft:#5C6E64;
+  --primary:#3D6B4F;
+  --primary-dark:#2C4F3A;
+  --primary-soft:#E1EAE2;
+  --accent:#E2A33B;
+  --accent-soft:#FBEBD2;
+  --alert:#B23B2E;
+  --alert-soft:#F7E2DE;
+  --line:#DDE3D6;
+  --radius-s:8px;
+  --radius-m:14px;
+  --radius-l:22px;
+  --shadow:0 2px 10px rgba(31,44,36,0.07);
+  --font-display:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;
+  --font-body:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Noto Sans JP",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-body);
+  background:var(--bg);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+}
+button,input,select,textarea{font-family:inherit;}
+button{cursor:pointer;}
+h1,h2,h3{font-family:var(--font-display);margin:0;font-weight:600;}
+.app-shell{
+  max-width:480px;
+  margin:0 auto;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  background:var(--bg);
+  position:relative;
+}
+@media (min-width:481px){
+  .app-shell{box-shadow:0 0 0 1px var(--line);}
+}
+
+/* オフライン表示 */
+.offline-banner{
+  background:var(--accent-soft);
+  color:var(--primary-dark);
+  text-align:center;
+  font-size:0.78rem;
+  padding:6px 10px;
+  letter-spacing:0.04em;
+  display:none;
+}
+.offline-banner.show{display:block;}
+
+/* ヘッダー */
+.top-bar{
+  position:sticky;
+  top:0;
+  z-index:20;
+  background:var(--surface);
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 14px;
+  min-height:54px;
+}
+.top-bar__back{
+  display:none;
+  align-items:center;
+  justify-content:center;
+  width:36px;height:36px;
+  border:none;background:transparent;color:var(--primary);
+  border-radius:999px;flex-shrink:0;
+}
+.top-bar__back.show{display:flex;}
+.top-bar__back:active{background:var(--surface-2);}
+.top-bar__title{
+  flex:1;
+  font-size:1.18rem;
+  letter-spacing:0.04em;
+  color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.top-bar__action{display:flex;gap:6px;flex-shrink:0;}
+
+/* メイン */
+.main{
+  flex:1;
+  padding:14px 14px 90px;
+  overflow-x:hidden;
+}
+.main.no-pad{padding:0 0 90px;}
+
+/* ボトムナビ */
+.bottom-nav{
+  position:sticky;
+  bottom:0;
+  z-index:20;
+  background:var(--surface);
+  border-top:1px solid var(--line);
+  display:flex;
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+.nav-item{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  padding:6px 2px;
+  border-radius:var(--radius-s);
+  color:var(--ink-soft);
+  text-decoration:none;
+  font-size:0.68rem;
+  letter-spacing:0.03em;
+  border:none;background:none;
+}
+.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.nav-item.active{color:var(--primary);font-weight:600;}
+.nav-item .nav-badge{
+  position:relative;
+}
+.nav-badge .dot{
+  position:absolute;top:-2px;right:-6px;
+  width:8px;height:8px;border-radius:999px;background:var(--alert);
+  border:1.5px solid var(--surface);
+}
+
+/* セクション見出し */
+.eyebrow{
+  font-size:0.72rem;color:var(--ink-soft);letter-spacing:0.12em;
+  margin:0 0 4px;text-transform:none;
+}
+.section-title{font-size:1.05rem;margin:0 0 10px;}
+.page-lead{color:var(--ink-soft);font-size:0.85rem;margin:-4px 0 14px;line-height:1.6;}
+
+/* カード */
+.card{
+  background:var(--surface);
+  border-radius:var(--radius-m);
+  box-shadow:var(--shadow);
+  padding:14px;
+  margin-bottom:12px;
+}
+.card + .card{margin-top:0;}
+
+/* ホーム統計 */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.stat-card{
+  display:block;
+  background:var(--surface);
+  border-radius:var(--radius-m);
+  box-shadow:var(--shadow);
+  padding:16px 14px;
+  text-decoration:none;
+  color:var(--ink);
+  border-left:4px solid var(--primary-soft);
+  transition:transform .08s ease;
+}
+.stat-card:active{transform:scale(0.98);}
+.stat-card.alert{border-left-color:var(--alert);}
+.stat-card .stat-label{font-size:0.78rem;color:var(--ink-soft);margin-bottom:6px;}
+.stat-card .stat-number{font-family:var(--font-display);font-size:2.1rem;font-variant-numeric:tabular-nums;line-height:1;}
+.stat-card .stat-unit{font-size:0.85rem;color:var(--ink-soft);margin-left:4px;}
+
+/* リスト */
+.list{list-style:none;margin:0;padding:0;}
+.list-item{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 2px;
+  border-bottom:1px solid var(--line);
+  text-decoration:none;color:var(--ink);
+  background:none;border:none;width:100%;text-align:left;
+}
+.list-item:last-child{border-bottom:none;}
+.list-item__main{flex:1;min-width:0;}
+.list-item__name{font-weight:600;font-size:0.98rem;}
+.list-item__meta{font-size:0.78rem;color:var(--ink-soft);margin-top:2px;}
+.chevron{flex-shrink:0;color:var(--ink-soft);}
+.chevron svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;}
+
+/* 耳標バッジ（識別番号） */
+.tag-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--accent);
+  color:var(--primary-dark);
+  font-weight:700;
+  font-size:0.78rem;
+  letter-spacing:0.04em;
+  border-radius:6px 6px 6px 2px;
+  padding:3px 9px 3px 7px;
+  position:relative;
+  font-variant-numeric:tabular-nums;
+}
+.tag-badge::before{
+  content:"";
+  width:6px;height:6px;border-radius:999px;
+  background:var(--bg);
+  flex-shrink:0;
+}
+
+/* ステータスバッジ */
+.status-badge{
+  display:inline-block;font-size:0.72rem;font-weight:600;
+  padding:2px 8px;border-radius:999px;letter-spacing:0.04em;
+}
+.status-badge.s-active{background:var(--primary-soft);color:var(--primary-dark);}
+.status-badge.s-dry{background:var(--accent-soft);color:#8A5A14;}
+.status-badge.s-shipped,.status-badge.s-culled{background:var(--surface-2);color:var(--ink-soft);}
+
+/* フォーム */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:0.82rem;color:var(--ink-soft);margin-bottom:6px;letter-spacing:0.02em;}
+.field input,.field select,.field textarea{
+  width:100%;
+  padding:11px 12px;
+  border:1px solid var(--line);
+  border-radius:var(--radius-s);
+  background:var(--surface);
+  color:var(--ink);
+  font-size:0.95rem;
+  min-height:46px;
+}
+.field textarea{min-height:72px;resize:vertical;}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:2px solid var(--primary);outline-offset:1px;
+}
+.field-row{display:flex;gap:10px;}
+.field-row .field{flex:1;}
+.field-hint{font-size:0.74rem;color:var(--ink-soft);margin-top:5px;}
+
+/* チップ */
+.chip-group{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.chip{
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--ink-soft);
+  border-radius:999px;
+  padding:6px 12px;
+  font-size:0.78rem;
+}
+.chip:active{transform:scale(0.97);}
+.chip.selected{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-dark);}
+
+/* ボタン */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border-radius:var(--radius-s);
+  border:1px solid transparent;
+  padding:12px 18px;
+  font-size:0.92rem;font-weight:600;
+  min-height:46px;
+  letter-spacing:0.02em;
+}
+.btn-block{display:flex;width:100%;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:active{background:var(--primary-dark);}
+.btn-secondary{background:var(--surface);color:var(--primary-dark);border-color:var(--primary);}
+.btn-ghost{background:transparent;color:var(--ink-soft);border-color:var(--line);}
+.btn-danger{background:var(--surface);color:var(--alert);border-color:var(--alert);}
+.btn-sm{padding:8px 12px;font-size:0.8rem;min-height:36px;}
+.btn-icon{
+  width:36px;height:36px;border-radius:999px;border:none;
+  background:var(--surface-2);color:var(--primary-dark);
+  display:flex;align-items:center;justify-content:center;padding:0;
+}
+.btn-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;}
+.btn[disabled]{opacity:0.5;}
+
+.action-row{display:flex;gap:8px;margin-top:16px;}
+.action-row .btn{flex:1;}
+
+/* 空表示 */
+.empty-state{
+  text-align:center;padding:40px 16px;color:var(--ink-soft);
+}
+.empty-state .empty-icon{margin-bottom:10px;opacity:0.6;}
+.empty-state .empty-icon svg{width:42px;height:42px;stroke:currentColor;fill:none;stroke-width:1.5;}
+.empty-state p{margin:4px 0;font-size:0.85rem;}
+
+/* 検索・フィルタ */
+.search-bar{position:relative;margin-bottom:10px;}
+.search-bar input{
+  width:100%;padding:11px 12px 11px 38px;border:1px solid var(--line);
+  border-radius:var(--radius-s);background:var(--surface);font-size:0.92rem;min-height:46px;
+}
+.search-bar svg{
+  position:absolute;left:11px;top:50%;transform:translateY(-50%);
+  width:18px;height:18px;stroke:var(--ink-soft);fill:none;stroke-width:1.8;
+}
+.filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;}
+.filter-row .chip{white-space:nowrap;flex-shrink:0;}
+
+/* タイムライン */
+.timeline{list-style:none;margin:0;padding:0;}
+.timeline-item{
+  display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);
+}
+.timeline-item:last-child{border-bottom:none;}
+.timeline-dot{
+  flex-shrink:0;width:34px;height:34px;border-radius:999px;
+  background:var(--primary-soft);color:var(--primary-dark);
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.95rem;margin-top:2px;
+}
+.timeline-body{flex:1;min-width:0;}
+.timeline-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.timeline-type{font-weight:700;font-size:0.92rem;}
+.timeline-date{font-size:0.76rem;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.timeline-detail{font-size:0.84rem;color:var(--ink-soft);margin-top:3px;line-height:1.6;}
+.timeline-actions{display:flex;gap:10px;margin-top:6px;}
+.timeline-actions button{background:none;border:none;padding:0;font-size:0.76rem;color:var(--primary-dark);text-decoration:underline;}
+.timeline-actions button.danger{color:var(--alert);}
+
+/* カルテ用 */
+.kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.kv{background:var(--surface-2);border-radius:var(--radius-s);padding:10px 12px;}
+.kv .kv-label{font-size:0.72rem;color:var(--ink-soft);margin-bottom:3px;}
+.kv .kv-value{font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums;}
+.kv .kv-sub{font-size:0.7rem;color:var(--ink-soft);margin-top:2px;}
+
+/* 妊鑑/未授精リスト カード */
+.task-card{background:var(--surface);border-radius:var(--radius-m);box-shadow:var(--shadow);padding:14px;margin-bottom:10px;}
+.task-card__head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;}
+.task-card__days{font-family:var(--font-display);font-size:1.6rem;font-variant-numeric:tabular-nums;line-height:1;color:var(--alert);}
+.task-card__days .unit{font-size:0.75rem;color:var(--ink-soft);font-family:var(--font-body);margin-left:2px;}
+.task-card__row{font-size:0.82rem;color:var(--ink-soft);margin:3px 0;line-height:1.6;}
+.task-card__row b{color:var(--ink);font-weight:600;}
+.task-card__actions{display:flex;gap:8px;margin-top:10px;}
+.task-card__actions .btn{flex:1;}
+
+/* トースト */
+.toast{
+  position:fixed;left:50%;bottom:84px;transform:translateX(-50%) translateY(20px);
+  background:var(--primary-dark);color:#fff;padding:10px 18px;border-radius:999px;
+  font-size:0.82rem;box-shadow:var(--shadow);opacity:0;transition:opacity .25s,transform .25s;
+  z-index:50;white-space:nowrap;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* KPI検証テーブル */
+.kpi-list{list-style:none;margin:0;padding:0;}
+.kpi-list li{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:0.86rem;}
+.kpi-list li:last-child{border-bottom:none;}
+.kpi-list .kpi-name{color:var(--ink-soft);}
+.kpi-list .kpi-val{font-weight:700;font-variant-numeric:tabular-nums;}
+
+/* ユーティリティ */
+.mt-8{margin-top:8px;}
+.mt-16{margin-top:16px;}
+.text-muted{color:var(--ink-soft);}
+.text-alert{color:var(--alert);}
+.hidden{display:none !important;}
+hr.div{border:none;border-top:1px solid var(--line);margin:14px 0;}
+.swipe-row{display:flex;gap:8px;}
+.farm-pill{
+  display:inline-flex;align-items:center;gap:4px;font-size:0.76rem;color:var(--primary-dark);
+  background:var(--primary-soft);padding:3px 10px;border-radius:999px;margin-bottom:10px;
+}
+</style>
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <div class="offline-banner" id="offlineBanner">オフラインで動作中（データは端末内に保存されます）</div>
+  <header class="top-bar">
+    <button class="top-bar__back" id="backBtn" aria-label="戻る">
+      <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <h1 class="top-bar__title" id="screenTitle">繁殖巡回 記録ノート</h1>
+    <div class="top-bar__action" id="headerAction"></div>
+  </header>
+
+  <main class="main" id="appMain"></main>
+
+  <nav class="bottom-nav" id="bottomNav">
+    <a class="nav-item" data-route="home" href="#/home">
+      <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-5h4v5h4a1 1 0 0 0 1-1v-9"/></svg>
+      <span>ホーム</span>
+    </a>
+    <a class="nav-item" data-route="cows" href="#/cows">
+      <svg viewBox="0 0 24 24"><circle cx="4.5" cy="6" r="1.1" fill="currentColor" stroke="none"/><line x1="8" y1="6" x2="20" y2="6"/><circle cx="4.5" cy="12" r="1.1" fill="currentColor" stroke="none"/><line x1="8" y1="12" x2="20" y2="12"/><circle cx="4.5" cy="18" r="1.1" fill="currentColor" stroke="none"/><line x1="8" y1="18" x2="20" y2="18"/></svg>
+      <span>牛一覧</span>
+    </a>
+    <a class="nav-item nav-badge" data-route="open-ai" href="#/open-ai">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7.5" x2="12" y2="13"/><circle cx="12" cy="16.3" r="0.6" fill="currentColor" stroke="none"/></svg>
+      <span>未授精</span>
+      <span class="dot hidden" id="badgeOpenAI"></span>
+    </a>
+    <a class="nav-item nav-badge" data-route="preg-check" href="#/preg-check">
+      <svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
+      <span>妊鑑</span>
+      <span class="dot hidden" id="badgePreg"></span>
+    </a>
+    <a class="nav-item" data-route="settings" href="#/settings">
+      <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="14" cy="6" r="2" fill="var(--surface)"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="8" cy="12" r="2" fill="var(--surface)"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="16" cy="18" r="2" fill="var(--surface)"/></svg>
+      <span>設定</span>
+    </a>
+  </nav>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+'use strict';
+
+/* =========================================================
+   定数・ユーティリティ
+   ========================================================= */
+const EVENT_TYPES = {
+  calving:    { label: '分娩',     icon: '産' },
+  AI:         { label: '授精',     icon: '種' },
+  preg_check: { label: '妊娠鑑定', icon: '鑑' },
+  exam:       { label: '検診所見', icon: '検' },
+  dry_off:    { label: '乾乳',     icon: '乾' }
+};
+const COW_STATUS = ['在群', '乾乳', '出荷', '淘汰'];
+const DEFAULT_SETTINGS = {
+  id: 'main',
+  gestationDays: 285,
+  vwpDays: 50,
+  cycleDays: 21,
+  openAiThreshold: 40,
+  pregCheckThreshold: 28,
+  activeFarmId: null // null = 全農場
+};
+
+function uid(){
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+}
+
+/* ---- 日付ユーティリティ（"YYYY-MM-DD" 文字列で統一）---- */
+function todayStr(){
+  const d = new Date();
+  return dateToStr(d);
+}
+function dateToStr(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function strToDate(s){
+  if (!s) return null;
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, (m||1)-1, d||1);
+}
+function diffDays(fromStr, toStr){
+  if (!fromStr || !toStr) return null;
+  const a = strToDate(fromStr), b = strToDate(toStr);
+  return Math.round((b - a) / 86400000);
+}
+function addDaysToStr(dateStr, days){
+  if (!dateStr) return null;
+  const d = strToDate(dateStr);
+  d.setDate(d.getDate() + days);
+  return dateToStr(d);
+}
+function formatDateJp(s){
+  if (!s) return '―';
+  const [y,m,d] = s.split('-');
+  return `${y}/${m}/${d}`;
+}
+function formatNum(v, digits){
+  if (v === null || v === undefined || isNaN(v)) return '―';
+  return Number(v).toFixed(digits === undefined ? 0 : digits);
+}
+function excelSerialToDateStr(serial){
+  // Excel(1900日付システム)のシリアル値 → "YYYY-MM-DD"
+  const n = Number(serial);
+  if (!n || isNaN(n)) return null;
+  const epoch = new Date(1899, 11, 30); // 1899-12-30
+  const d = new Date(epoch.getTime() + n * 86400000);
+  return dateToStr(d);
+}
+
+/* =========================================================
+   IndexedDB レイヤー
+   ========================================================= */
+const DB_NAME = 'hanshokuJunkaiDB';
+const DB_VERSION = 1;
+let dbPromise = null;
+
+function openDB(){
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('farms')){
+        db.createObjectStore('farms', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('cows')){
+        const cows = db.createObjectStore('cows', { keyPath: 'id' });
+        cows.createIndex('farmId', 'farmId', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('events')){
+        const events = db.createObjectStore('events', { keyPath: 'id' });
+        events.createIndex('cowId', 'cowId', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('settings')){
+        db.createObjectStore('settings', { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+  return dbPromise;
+}
+
+function tx(storeName, mode){
+  return openDB().then(db => db.transaction(storeName, mode).objectStore(storeName));
+}
+function reqToPromise(req){
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+const DB = {
+  async getAll(store){
+    const os = await tx(store, 'readonly');
+    return reqToPromise(os.getAll());
+  },
+  async get(store, id){
+    const os = await tx(store, 'readonly');
+    return reqToPromise(os.get(id));
+  },
+  async put(store, value){
+    const os = await tx(store, 'readwrite');
+    return reqToPromise(os.put(value));
+  },
+  async delete(store, id){
+    const os = await tx(store, 'readwrite');
+    return reqToPromise(os.delete(id));
+  },
+  async clear(store){
+    const os = await tx(store, 'readwrite');
+    return reqToPromise(os.clear());
+  },
+  async byIndex(store, indexName, value){
+    const os = await tx(store, 'readonly');
+    return reqToPromise(os.index(indexName).getAll(value));
+  }
+};
+
+/* アプリ全体のキャッシュ（メモリ）。各操作後にDBへ書き込み、再読込する。 */
+const STATE = {
+  farms: [],
+  cows: [],
+  events: [],
+  settings: { ...DEFAULT_SETTINGS }
+};
+
+async function loadAll(){
+  const [farms, cows, events, settingsList] = await Promise.all([
+    DB.getAll('farms'),
+    DB.getAll('cows'),
+    DB.getAll('events'),
+    DB.getAll('settings')
+  ]);
+  STATE.farms = farms;
+  STATE.cows = cows;
+  STATE.events = events;
+  const s = settingsList.find(s => s.id === 'main');
+  STATE.settings = s ? { ...DEFAULT_SETTINGS, ...s } : { ...DEFAULT_SETTINGS };
+  if (!s){
+    await DB.put('settings', STATE.settings);
+  }
+  if (farms.length === 0){
+    const farm = { id: uid(), name: '農場1' };
+    STATE.farms = [farm];
+    await DB.put('farms', farm);
+  }
+}
+
+/* =========================================================
+   計算ロジック（2.1 個体ごとの現在値 / リスト抽出）
+   ========================================================= */
+
+// 牛に紐づくイベントを日付昇順で取得
+function eventsForCow(cowId){
+  return STATE.events
+    .filter(e => e.cowId === cowId)
+    .slice()
+    .sort((a,b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.id < b.id ? -1 : 1)));
+}
+
+// 2.1 個体ごとの現在値を計算する
+// asOf: 基準日("YYYY-MM-DD")。既定は当日。
+function computeCowSnapshot(cow, asOf){
+  asOf = asOf || todayStr();
+  const events = eventsForCow(cow.id);
+  const calvings = events.filter(e => e.type === 'calving');
+  const ais = events.filter(e => e.type === 'AI');
+  const pregChecks = events.filter(e => e.type === 'preg_check');
+  const exams = events.filter(e => e.type === 'exam');
+  const dryOffs = events.filter(e => e.type === 'dry_off');
+
+  const lastCalving = calvings.length ? calvings[calvings.length-1] : null;
+  const lastAIOverall = ais.length ? ais[ais.length-1] : null;
+  const lastDryOff = dryOffs.length ? dryOffs[dryOffs.length-1] : null;
+  const lastExam = exams.length ? exams[exams.length-1] : null;
+  const parity = calvings.length;
+
+  // 最終分娩以降の授精
+  const ref = lastCalving ? lastCalving.date : null;
+  const aisSinceRef = ais.filter(a => !ref || a.date > ref);
+  const lastAISinceRef = aisSinceRef.length ? aisSinceRef[aisSinceRef.length-1] : null;
+
+  // 妊否（現在）の判定
+  // ・最終分娩以降に授精がなければ「未授精」
+  // ・授精があり、その授精以降に妊娠鑑定がなければ「判定待ち」
+  // ・授精以降に妊娠鑑定があれば、その結果（妊娠/不妊/再検）を採用
+  //   （鑑定後に新しい授精があれば、上の lastAISinceRef 判定により自動的に「判定待ち」へ戻る）
+  let pregStatus = '未授精';
+  let pendingAI = null; // 鑑定待ちの授精イベント
+  if (lastAISinceRef){
+    const checksAfter = pregChecks.filter(p => p.date >= lastAISinceRef.date);
+    if (checksAfter.length === 0){
+      pregStatus = '判定待ち';
+      pendingAI = lastAISinceRef;
+    } else {
+      pregStatus = checksAfter[checksAfter.length-1].result; // 妊娠 / 不妊 / 再検
+    }
+  }
+
+  const daysSinceCalving = lastCalving ? diffDays(lastCalving.date, asOf) : null;
+  const daysSinceAI = lastAISinceRef ? diffDays(lastAISinceRef.date, asOf)
+                     : (lastAIOverall ? diffDays(lastAIOverall.date, asOf) : null);
+
+  // 受胎授精日（妊娠確定時のみ）→ 分娩予定日 / 乾乳予定日
+  let conceptionDate = null, expectedCalvingDate = null, expectedDryOffDate = null;
+  if (pregStatus === '妊娠' && lastAISinceRef){
+    conceptionDate = lastAISinceRef.date;
+    expectedCalvingDate = addDaysToStr(conceptionDate, STATE.settings.gestationDays);
+    expectedDryOffDate = addDaysToStr(expectedCalvingDate, -60);
+  }
+
+  return {
+    cow, events,
+    lastCalving, lastAIOverall, lastAISinceRef, pendingAI, lastDryOff, lastExam,
+    parity, pregStatus,
+    daysSinceCalving, daysSinceAI,
+    conceptionDate, expectedCalvingDate, expectedDryOffDate,
+    bcs: lastExam ? lastExam.bcs : null
+  };
+}
+
+// 在群牛のみ（v1のリスト・KPIは在群牛を対象とする）
+function activeCows(farmId){
+  return STATE.cows.filter(c => c.status === '在群' && (!farmId || c.farmId === farmId));
+}
+
+/* ---- 未授精リスト ----
+   条件：在群 かつ 分娩歴あり かつ「未授精」(最終分娩以降に授精なし)
+         かつ 分娩後日数 ≥ openAiThreshold                              */
+function getOpenAIList(asOf, farmId){
+  asOf = asOf || todayStr();
+  const th = STATE.settings.openAiThreshold;
+  return activeCows(farmId)
+    .map(c => computeCowSnapshot(c, asOf))
+    .filter(s => s.lastCalving && s.pregStatus === '未授精' && s.daysSinceCalving >= th)
+    .sort((a,b) => b.daysSinceCalving - a.daysSinceCalving);
+}
+
+/* ---- 妊鑑リスト ----
+   条件：在群 かつ「判定待ち」(授精済・未鑑定) かつ 種付け後日数 ≥ pregCheckThreshold */
+function getPregCheckList(asOf, farmId){
+  asOf = asOf || todayStr();
+  const th = STATE.settings.pregCheckThreshold;
+  return activeCows(farmId)
+    .map(c => computeCowSnapshot(c, asOf))
+    .filter(s => s.pregStatus === '判定待ち' && s.daysSinceAI >= th)
+    .sort((a,b) => b.daysSinceAI - a.daysSinceAI);
+}
+
+/* =========================================================
+   2.2 繁殖成績KPI（群・期間集計）
+   --------------------------------------------------------
+   v1ではダッシュボードUIは作らず、算出関数のみ用意する
+   （設定画面の「KPI検証」セクションで内容を確認できる）。
+   各指標の定義は下記コメントの通り。獣医師が確認・調整できるよう
+   ロジックをこの関数内にまとめている。
+   ========================================================= */
+
+// 1頭の繁殖サイクル（分娩→次の分娩、または分娩→現在）に分割する
+function buildCyclesForCow(cow, asOf){
+  const events = eventsForCow(cow.id);
+  const calvings = events.filter(e => e.type === 'calving');
+  const ais = events.filter(e => e.type === 'AI');
+  const cycles = [];
+  for (let i = 0; i < calvings.length; i++){
+    const start = calvings[i].date;
+    const end = calvings[i+1] ? calvings[i+1].date : null;
+    const cycleAIs = ais.filter(a => a.date > start && (end === null || a.date < end))
+                         .sort((a,b)=> a.date < b.date ? -1 : 1);
+    let conceptionDate = null;
+    if (end !== null){
+      // 完了済みサイクル：次の分娩につながった授精＝サイクル内最後の授精とみなす
+      if (cycleAIs.length) conceptionDate = cycleAIs[cycleAIs.length-1].date;
+    } else {
+      // 進行中サイクル：現在「妊娠」が確定していればその受胎授精日を使う
+      const snap = computeCowSnapshot(cow, asOf);
+      if (snap.pregStatus === '妊娠') conceptionDate = snap.conceptionDate;
+    }
+    const aiCountToConception = conceptionDate
+      ? cycleAIs.filter(a => a.date <= conceptionDate).length
+      : 0;
+    cycles.push({ start, end, cycleAIs, conceptionDate, aiCountToConception });
+  }
+  return cycles;
+}
+
+// cows: KPI集計対象の牛（通常は activeCows() の結果。淘汰牛も含めたい場合は呼び出し側で調整）
+function computeKPI(cows, asOf){
+  asOf = asOf || todayStr();
+  const s = STATE.settings;
+
+  const daysToFirstAIList = [];   // 初回授精日数
+  const openDaysList = [];        // 実空胎日数
+  const calvingIntervalList = []; // 分娩間隔
+  const aiPerConceptionList = []; // 受胎あたり授精回数
+  let totalAIServices = 0;        // 受胎率の分母（全授精回数）
+  let totalConceptions = 0;       // 受胎率の分子（妊娠確定数）
+  let firstServiceCows = 0;       // 初回受胎率の分母
+  let firstServiceConceptions = 0;// 初回受胎率の分子
+  let expectedEstrusSum = 0;      // 発情発見率の分母（期待発情回数）
+  let actualEstrusAISum = 0;      // 発情発見率の分子（実際の授精回数）
+
+  cows.forEach(cow => {
+    const cycles = buildCyclesForCow(cow, asOf);
+    cycles.forEach(cyc => {
+      // 初回授精日数
+      if (cyc.cycleAIs.length){
+        daysToFirstAIList.push(diffDays(cyc.start, cyc.cycleAIs[0].date));
+      }
+      // 分娩間隔（完了サイクルのみ）
+      if (cyc.end){
+        calvingIntervalList.push(diffDays(cyc.start, cyc.end));
+      }
+      // 実空胎日数・授精回数/受胎・受胎率
+      totalAIServices += cyc.cycleAIs.length;
+      if (cyc.conceptionDate){
+        openDaysList.push(diffDays(cyc.start, cyc.conceptionDate));
+        aiPerConceptionList.push(cyc.aiCountToConception);
+        totalConceptions += 1;
+        if (cyc.cycleAIs.length >= 1 && cyc.aiCountToConception === 1){
+          firstServiceConceptions += 1;
+        }
+      }
+      if (cyc.cycleAIs.length >= 1) firstServiceCows += 1;
+
+      // 発情発見率：VWP経過後〜受胎(または現在/次回分娩)までの期間で
+      // 「cycleDays周期で迎えるはずの発情数」に対する実際の授精回数の割合
+      const windowStart = addDaysToStr(cyc.start, s.vwpDays);
+      const windowEnd = cyc.conceptionDate || cyc.end || asOf;
+      const span = diffDays(windowStart, windowEnd);
+      if (span > 0){
+        expectedEstrusSum += Math.floor(span / s.cycleDays);
+        actualEstrusAISum += cyc.cycleAIs.filter(a => a.date >= windowStart && a.date <= windowEnd).length;
+      }
+    });
+  });
+
+  const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+
+  const avgOpenDays = avg(openDaysList);
+  const conceptionRate = totalAIServices > 0 ? (totalConceptions/totalAIServices*100) : null;
+  const estrusDetectionRate = expectedEstrusSum > 0 ? (actualEstrusAISum/expectedEstrusSum*100) : null;
+  const pregnancyRate = (estrusDetectionRate !== null && conceptionRate !== null)
+    ? (estrusDetectionRate/100) * (conceptionRate/100) * 100 : null;
+
+  // 平均産次・頭数・平均BCS（在群牛の単純集計）
+  const parities = cows.map(c => computeCowSnapshot(c, asOf).parity);
+  const bcsList = cows.map(c => computeCowSnapshot(c, asOf).bcs).filter(v => v !== null && v !== undefined);
+
+  return {
+    headCount: cows.length,
+    avgParity: avg(parities),
+    avgBCS: avg(bcsList),
+    daysToFirstAI: avg(daysToFirstAIList),
+    actualOpenDays: avgOpenDays,
+    calvingInterval: avg(calvingIntervalList),
+    expectedCalvingInterval: avgOpenDays !== null ? avgOpenDays + s.gestationDays : null,
+    aiPerConception: avg(aiPerConceptionList),
+    conceptionRate,
+    firstServiceConceptionRate: firstServiceCows > 0 ? (firstServiceConceptions/firstServiceCows*100) : null,
+    estrusDetectionRate,
+    pregnancyRate,
+    // 検証用の生カウント
+    _raw: { totalAIServices, totalConceptions, firstServiceCows, firstServiceConceptions, expectedEstrusSum, actualEstrusAISum }
+  };
+}
+
+/* =========================================================
+   アプリ基盤：ルーター / ヘッダー / トースト / バッジ
+   ========================================================= */
+const UI = {
+  cowListFilter: { q: '', status: '全て' }
+};
+
+function navigate(hash){
+  if (location.hash === hash){ route(); }
+  else location.hash = hash;
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=> t.classList.remove('show'), 2200);
+}
+function setHeader(title, { back=false, action='' } = {}){
+  document.getElementById('screenTitle').textContent = title;
+  const backBtn = document.getElementById('backBtn');
+  backBtn.classList.toggle('show', !!back);
+  document.getElementById('headerAction').innerHTML = action;
+}
+function setMainHTML(html){
+  document.getElementById('appMain').innerHTML = html;
+  document.getElementById('appMain').scrollTop = 0;
+}
+function updateNavActive(name){
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.route === name);
+  });
+}
+function updateBadges(){
+  const farmId = STATE.settings.activeFarmId;
+  const openAI = getOpenAIList(todayStr(), farmId).length;
+  const preg = getPregCheckList(todayStr(), farmId).length;
+  document.getElementById('badgeOpenAI').classList.toggle('hidden', openAI === 0);
+  document.getElementById('badgePreg').classList.toggle('hidden', preg === 0);
+}
+function farmName(farmId){
+  const f = STATE.farms.find(f => f.id === farmId);
+  return f ? f.name : '（農場未設定）';
+}
+function activeFarmLabel(){
+  if (!STATE.settings.activeFarmId) return '全農場';
+  return farmName(STATE.settings.activeFarmId);
+}
+function iconSvg(name){
+  const icons = {
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    edit: '<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>',
+    save: '<path d="M5 4h11l3 3v13H5z"/><path d="M9 4v5h6V4"/><path d="M8 14h8v6H8z"/>',
+    cow: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>',
+    download: '<path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/>',
+    upload: '<path d="M12 20V9"/><path d="M7 13l5-5 5 5"/><path d="M5 4h14"/>'
+  };
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons[name]||''}</svg>`;
+}
+
+/* =========================================================
+   ルーティング
+   ========================================================= */
+function route(){
+  const hash = location.hash.replace(/^#\/?/, '');
+  const parts = hash.split('/').filter(Boolean);
+  const main = document.getElementById('appMain');
+  main.classList.remove('no-pad');
+
+  if (parts.length === 0 || parts[0] === 'home'){
+    updateNavActive('home'); renderHome();
+  } else if (parts[0] === 'cows' && parts[1] === 'new'){
+    updateNavActive('cows'); renderCowForm(null);
+  } else if (parts[0] === 'cows'){
+    updateNavActive('cows'); renderCowList();
+  } else if (parts[0] === 'cow' && parts[2] === 'edit'){
+    updateNavActive('cows'); renderCowForm(parts[1]);
+  } else if (parts[0] === 'cow' && parts[2] === 'event' && parts[3] === 'new'){
+    updateNavActive(''); renderEventForm(parts[1], null, parts[4] || null);
+  } else if (parts[0] === 'cow'){
+    updateNavActive(''); renderCowDetail(parts[1]);
+  } else if (parts[0] === 'event' && parts[2] === 'edit'){
+    updateNavActive(''); renderEventForm(null, parts[1]);
+  } else if (parts[0] === 'open-ai'){
+    updateNavActive('open-ai'); renderOpenAIList();
+  } else if (parts[0] === 'preg-check'){
+    updateNavActive('preg-check'); renderPregCheckList();
+  } else if (parts[0] === 'settings'){
+    updateNavActive('settings'); renderSettings();
+  } else if (parts[0] === 'backup'){
+    updateNavActive('settings'); renderBackup();
+  } else if (parts[0] === 'farms' && parts[1] === 'new'){
+    updateNavActive('settings'); renderFarmForm(null);
+  } else if (parts[0] === 'farm' && parts[2] === 'edit'){
+    updateNavActive('settings'); renderFarmForm(parts[1]);
+  } else {
+    updateNavActive('home'); renderHome();
+  }
+  updateBadges();
+}
+
+/* =========================================================
+   ホーム
+   ========================================================= */
+function renderHome(){
+  setHeader('繁殖巡回 記録ノート');
+  const farmId = STATE.settings.activeFarmId;
+  const openAI = getOpenAIList(todayStr(), farmId);
+  const preg = getPregCheckList(todayStr(), farmId);
+  const herd = activeCows(farmId);
+
+  setMainHTML(`
+    <p class="eyebrow">${formatDateJp(todayStr())}（本日）の検診対象</p>
+    <div class="farm-pill">${escapeHtml(activeFarmLabel())}</div>
+    <div class="stat-grid">
+      <a class="stat-card ${openAI.length ? 'alert' : ''}" href="#/open-ai">
+        <div class="stat-label">未授精リスト</div>
+        <div class="stat-number">${openAI.length}<span class="stat-unit">頭</span></div>
+      </a>
+      <a class="stat-card ${preg.length ? 'alert' : ''}" href="#/preg-check">
+        <div class="stat-label">妊鑑リスト</div>
+        <div class="stat-number">${preg.length}<span class="stat-unit">頭</span></div>
+      </a>
+    </div>
+    <div class="card">
+      <h3 class="section-title">群の状況</h3>
+      <div class="kv-grid">
+        <div class="kv"><div class="kv-label">在群頭数</div><div class="kv-value">${herd.length}<span class="stat-unit">頭</span></div></div>
+        <div class="kv"><div class="kv-label">農場数</div><div class="kv-value">${STATE.farms.length}</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="section-title">クイック操作</h3>
+      <div class="action-row" style="margin-top:0;">
+        <a class="btn btn-secondary btn-block" href="#/cows">${iconSvg('cow')} 牛一覧から記録</a>
+      </div>
+      <div class="action-row">
+        <a class="btn btn-ghost btn-block" href="#/cows/new">${iconSvg('plus')} 新しい牛を登録</a>
+      </div>
+    </div>
+  `);
+}
+
+function escapeHtml(s){
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* =========================================================
+   牛一覧
+   ========================================================= */
+function renderCowList(){
+  setHeader('牛一覧', { action: `<button class="btn-icon" data-nav="#/cows/new" aria-label="牛を登録">${iconSvg('plus')}</button>` });
+  setMainHTML(`
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+      <input id="cowSearchInput" type="search" placeholder="名前・番号で検索" value="${escapeHtml(UI.cowListFilter.q)}">
+    </div>
+    <div class="filter-row" id="cowFilterRow">
+      ${['全て', ...COW_STATUS].map(st => `<button class="chip ${UI.cowListFilter.status===st?'selected':''}" data-cow-filter="${st}">${st}</button>`).join('')}
+    </div>
+    <div class="card" style="padding:0 14px;">
+      <ul class="list" id="cowListResults"></ul>
+    </div>
+  `);
+  renderCowListResults();
+
+  document.getElementById('cowSearchInput').addEventListener('input', (e) => {
+    UI.cowListFilter.q = e.target.value;
+    renderCowListResults();
+  });
+  document.getElementById('cowFilterRow').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-cow-filter]');
+    if (!btn) return;
+    UI.cowListFilter.status = btn.dataset.cowFilter;
+    document.querySelectorAll('#cowFilterRow .chip').forEach(c => c.classList.toggle('selected', c===btn));
+    renderCowListResults();
+  });
+}
+
+function renderCowListResults(){
+  const farmId = STATE.settings.activeFarmId;
+  const q = UI.cowListFilter.q.trim();
+  const status = UI.cowListFilter.status;
+  let cows = STATE.cows.filter(c => !farmId || c.farmId === farmId);
+  if (status !== '全て') cows = cows.filter(c => c.status === status);
+  if (q) cows = cows.filter(c => (c.name||'').includes(q) || (c.tagNo||'').includes(q) || (c.cowNo||'').includes(q));
+  cows.sort((a,b) => (a.cowNo||a.tagNo||'').localeCompare(b.cowNo||b.tagNo||'', 'ja'));
+
+  const list = document.getElementById('cowListResults');
+  if (!list) return;
+  if (cows.length === 0){
+    list.innerHTML = `<li class="empty-state">
+      <div class="empty-icon">${iconSvg('cow')}</div>
+      <p>該当する牛がいません。</p>
+      <p>右上の「＋」から牛を登録してください。</p>
+    </li>`;
+    return;
+  }
+  list.innerHTML = cows.map(c => {
+    const snap = computeCowSnapshot(c);
+    let meta = '';
+    if (snap.lastCalving) meta = `分娩後 ${snap.daysSinceCalving}日（${snap.pregStatus}）`;
+    else meta = '分娩歴なし';
+    return `
+    <li>
+      <a class="list-item" href="#/cow/${c.id}">
+        <div class="list-item__main">
+          <div class="list-item__name">${escapeHtml(c.name||'(名前未設定)')} <span class="tag-badge">${escapeHtml(c.tagNo||c.cowNo||'-')}</span></div>
+          <div class="list-item__meta">${meta} ・ <span class="status-badge ${statusClass(c.status)}">${c.status}</span></div>
+        </div>
+        <span class="chevron"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+    </li>`;
+  }).join('');
+}
+function statusClass(status){
+  return { '在群':'s-active','乾乳':'s-dry','出荷':'s-shipped','淘汰':'s-culled' }[status] || '';
+}
+
+/* =========================================================
+   個体カルテ
+   ========================================================= */
+function renderCowDetail(cowId){
+  const cow = STATE.cows.find(c => c.id === cowId);
+  if (!cow){ navigate('#/cows'); return; }
+  const snap = computeCowSnapshot(cow);
+  const events = snap.events.slice().reverse(); // 新しい順
+
+  setHeader(cow.name || '個体カルテ', {
+    back: true,
+    action: `<button class="btn-icon" data-nav="#/cow/${cow.id}/edit" aria-label="編集">${iconSvg('edit')}</button>`
+  });
+
+  setMainHTML(`
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <span class="tag-badge">${escapeHtml(cow.tagNo || cow.cowNo || '-')}</span>
+        <span class="status-badge ${statusClass(cow.status)}">${cow.status}</span>
+        <span class="text-muted" style="font-size:0.8rem;">${escapeHtml(farmName(cow.farmId))}</span>
+      </div>
+      <h2 class="section-title" style="margin-bottom:6px;">${escapeHtml(cow.name || '(名前未設定)')}</h2>
+      <div class="kv-grid">
+        <div class="kv"><div class="kv-label">牛番号</div><div class="kv-value">${escapeHtml(cow.cowNo||'―')}</div></div>
+        <div class="kv"><div class="kv-label">共済番号</div><div class="kv-value">${escapeHtml(cow.kyosaiNo||'―')}</div></div>
+        <div class="kv"><div class="kv-label">生年月日</div><div class="kv-value" style="font-size:0.9rem;">${formatDateJp(cow.birthDate)}</div></div>
+        <div class="kv"><div class="kv-label">産次</div><div class="kv-value">${snap.parity}</div></div>
+      </div>
+      ${cow.note ? `<p class="page-lead" style="margin-top:10px;">${escapeHtml(cow.note)}</p>` : ''}
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">現在の繁殖ステータス</h3>
+      <div class="kv-grid">
+        <div class="kv">
+          <div class="kv-label">妊否</div>
+          <div class="kv-value" style="font-size:1.1rem;">${snap.pregStatus}</div>
+        </div>
+        <div class="kv">
+          <div class="kv-label">最終分娩日</div>
+          <div class="kv-value" style="font-size:0.9rem;">${formatDateJp(snap.lastCalving?.date)}</div>
+          <div class="kv-sub">${snap.daysSinceCalving!==null ? '分娩後 '+snap.daysSinceCalving+'日' : ''}</div>
+        </div>
+        <div class="kv">
+          <div class="kv-label">最終授精日</div>
+          <div class="kv-value" style="font-size:0.9rem;">${formatDateJp(snap.lastAISinceRef?.date || snap.lastAIOverall?.date)}</div>
+          <div class="kv-sub">${snap.daysSinceAI!==null ? '種付け後 '+snap.daysSinceAI+'日' : ''}</div>
+        </div>
+        <div class="kv">
+          <div class="kv-label">BCS（直近）</div>
+          <div class="kv-value">${snap.bcs ?? '―'}</div>
+        </div>
+        ${snap.expectedCalvingDate ? `
+        <div class="kv">
+          <div class="kv-label">分娩予定日</div>
+          <div class="kv-value" style="font-size:0.9rem;">${formatDateJp(snap.expectedCalvingDate)}</div>
+        </div>
+        <div class="kv">
+          <div class="kv-label">乾乳予定日</div>
+          <div class="kv-value" style="font-size:0.9rem;">${formatDateJp(snap.expectedDryOffDate)}</div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    <a class="btn btn-primary btn-block" href="#/cow/${cow.id}/event/new">${iconSvg('plus')} イベントを追加</a>
+
+    <div class="card mt-16">
+      <h3 class="section-title">記録履歴</h3>
+      ${events.length === 0 ? `
+        <div class="empty-state">
+          <p>まだ記録がありません。</p>
+          <p>「イベントを追加」から記録してください。</p>
+        </div>` : `
+        <ul class="timeline">
+          ${events.map(ev => renderTimelineItem(ev)).join('')}
+        </ul>`}
+    </div>
+  `);
+}
+
+function renderTimelineItem(ev){
+  const meta = EVENT_TYPES[ev.type] || { label: ev.type, icon: '?' };
+  return `
+  <li class="timeline-item">
+    <div class="timeline-dot">${meta.icon}</div>
+    <div class="timeline-body">
+      <div class="timeline-head">
+        <span class="timeline-type">${meta.label}</span>
+        <span class="timeline-date">${formatDateJp(ev.date)}</span>
+      </div>
+      <div class="timeline-detail">${eventDetailHtml(ev)}</div>
+      <div class="timeline-actions">
+        <button data-nav="#/event/${ev.id}/edit">編集</button>
+        <button class="danger" data-action="delete-event" data-id="${ev.id}">削除</button>
+      </div>
+    </div>
+  </li>`;
+}
+
+function eventDetailHtml(ev){
+  const parts = [];
+  switch(ev.type){
+    case 'AI':
+      if (ev.sire) parts.push(`種雄牛：${escapeHtml(ev.sire)}`);
+      if (ev.method) parts.push(`方法：${escapeHtml(ev.method)}`);
+      if (ev.semenType) parts.push(`精液等：${escapeHtml(ev.semenType)}`);
+      break;
+    case 'preg_check':
+      parts.push(`結果：${escapeHtml(ev.result || '―')}`);
+      break;
+    case 'exam':
+      if (ev.leftOvary) parts.push(`左卵巣：${escapeHtml(ev.leftOvary)}`);
+      if (ev.rightOvary) parts.push(`右卵巣：${escapeHtml(ev.rightOvary)}`);
+      if (ev.uterus) parts.push(`子宮：${escapeHtml(ev.uterus)}`);
+      if (ev.bcs !== undefined && ev.bcs !== null && ev.bcs !== '') parts.push(`BCS：${escapeHtml(ev.bcs)}`);
+      if (ev.treatment) parts.push(`処置：${escapeHtml(ev.treatment)}`);
+      if (ev.instruction) parts.push(`指示：${escapeHtml(ev.instruction)}`);
+      break;
+    default: break;
+  }
+  if (ev.note) parts.push(`備考：${escapeHtml(ev.note)}`);
+  return parts.length ? parts.join('<br>') : '<span class="text-muted">（詳細なし）</span>';
+}
+
+/* =========================================================
+   牛マスタ 登録・編集フォーム
+   ========================================================= */
+function renderCowForm(cowId){
+  const cow = cowId ? STATE.cows.find(c => c.id === cowId) : null;
+  const isNew = !cow;
+  setHeader(isNew ? '牛を登録' : '牛情報を編集', { back: true });
+
+  const farmOptions = STATE.farms.map(f =>
+    `<option value="${f.id}" ${cow && cow.farmId===f.id ? 'selected' : (!cow && f.id===STATE.settings.activeFarmId ? 'selected':'')}>${escapeHtml(f.name)}</option>`
+  ).join('');
+
+  setMainHTML(`
+    <form data-form="cow" data-id="${cow ? cow.id : ''}">
+      <div class="field">
+        <label>農場</label>
+        <select name="farmId">${farmOptions}</select>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>名前</label>
+          <input type="text" name="name" value="${escapeHtml(cow?.name||'')}" placeholder="例：かれん">
+        </div>
+        <div class="field">
+          <label>識別番号（耳標）</label>
+          <input type="text" name="tagNo" value="${escapeHtml(cow?.tagNo||'')}" placeholder="例：2851">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>牛番号</label>
+          <input type="text" name="cowNo" value="${escapeHtml(cow?.cowNo||'')}">
+        </div>
+        <div class="field">
+          <label>共済番号</label>
+          <input type="text" name="kyosaiNo" value="${escapeHtml(cow?.kyosaiNo||'')}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>生年月日</label>
+          <input type="date" name="birthDate" value="${cow?.birthDate||''}">
+        </div>
+        <div class="field">
+          <label>状態</label>
+          <select name="status">
+            ${COW_STATUS.map(s => `<option value="${s}" ${cow?.status===s?'selected':(!cow && s==='在群'?'selected':'')}>${s}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>備考（前歴など）</label>
+        <textarea name="note">${escapeHtml(cow?.note||'')}</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">${iconSvg('save')} 保存する</button>
+      ${!isNew ? `<button type="button" class="btn btn-danger btn-block mt-8" data-action="delete-cow" data-id="${cow.id}">この牛を削除する</button>` : ''}
+    </form>
+  `);
+}
+
+/* =========================================================
+   イベント入力フォーム
+   ========================================================= */
+function sireOptions(){
+  const sires = new Set();
+  STATE.events.forEach(e => { if (e.type === 'AI' && e.sire) sires.add(e.sire); });
+  return Array.from(sires).map(s => `<option value="${escapeHtml(s)}">`).join('');
+}
+
+// 種別ごとの追加入力欄。ev が空オブジェクトなら新規入力の初期表示。
+function fieldsForType(type, ev){
+  ev = ev || {};
+  const ovaryOptions = ['正常','黄体(CL)','嚢腫','萎縮','排卵後','卵胞発育'];
+  const uterusOptions = ['正常','軽度炎症','中等度炎症','重度炎症','子宮内膜炎','蓄膿症'];
+  const treatmentOptions = ['経過観察','PGF2α投与','GnRH投与','ホルモン処置(他)','洗浄処置'];
+  const instructionOptions = ['再検','次回授精','様子見','治療継続','妊鑑予定'];
+
+  switch(type){
+    case 'calving':
+    case 'dry_off':
+      return `<p class="field-hint">この種別には追加入力項目はありません。日付と備考のみ記録します。</p>`;
+    case 'AI':
+      return `
+        <div class="field">
+          <label>種雄牛</label>
+          <input type="text" name="sire" list="sireList" value="${escapeHtml(ev.sire||'')}" placeholder="例：○○号">
+          <datalist id="sireList">${sireOptions()}</datalist>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>方法</label>
+            <select name="method">
+              <option value="AI" ${ev.method!=='ET'?'selected':''}>AI（人工授精）</option>
+              <option value="ET" ${ev.method==='ET'?'selected':''}>ET（受精卵移植）</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>精液等（任意）</label>
+            <input type="text" name="semenType" value="${escapeHtml(ev.semenType||'')}">
+          </div>
+        </div>
+        <div class="chip-group" data-chip-mode="replace" data-chip-target="semenType">
+          ${['通常','性判別','受精卵'].map(v=>`<button type="button" class="chip ${(ev.semenType||'')===v?'selected':''}" data-chip-value="${v}">${v}</button>`).join('')}
+        </div>`;
+    case 'preg_check':
+      return `
+        <div class="field">
+          <label>結果</label>
+          <select name="result">
+            ${['妊娠','不妊','再検'].map(v=>`<option value="${v}" ${ev.result===v?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>`;
+    case 'exam':
+      return `
+        <div class="field">
+          <label>左卵巣所見</label>
+          <input type="text" name="leftOvary" value="${escapeHtml(ev.leftOvary||'')}">
+          <div class="chip-group" data-chip-mode="append" data-chip-target="leftOvary">
+            ${ovaryOptions.map(v=>`<button type="button" class="chip ${(ev.leftOvary||'').includes(v)?'selected':''}" data-chip-value="${v}">${v}</button>`).join('')}
+          </div>
+        </div>
+        <div class="field">
+          <label>右卵巣所見</label>
+          <input type="text" name="rightOvary" value="${escapeHtml(ev.rightOvary||'')}">
+          <div class="chip-group" data-chip-mode="append" data-chip-target="rightOvary">
+            ${ovaryOptions.map(v=>`<button type="button" class="chip ${(ev.rightOvary||'').includes(v)?'selected':''}" data-chip-value="${v}">${v}</button>`).join('')}
+          </div>
+        </div>
+        <div class="field">
+          <label>子宮所見</label>
+          <input type="text" name="uterus" value="${escapeHtml(ev.uterus||'')}">
+          <div class="chip-group" data-chip-mode="append" data-chip-target="uterus">
+            ${uterusOptions.map(v=>`<button type="button" class="chip ${(ev.uterus||'').includes(v)?'selected':''}" data-chip-value="${v}">${v}</button>`).join('')}
+          </div>
+        </div>
+        <div class="field">
+          <label>BCS</label>
+          <input type="number" name="bcs" step="0.25" min="0" max="5" value="${ev.bcs ?? ''}" placeholder="例：2.75">
+        </div>
+        <div class="field">
+          <label>処置</label>
+          <input type="text" name="treatment" value="${escapeHtml(ev.treatment||'')}">
+          <div class="chip-group" data-chip-mode="append" data-chip-target="treatment">
+            ${treatmentOptions.map(v=>`<button type="button" class="chip ${(ev.treatment||'').includes(v)?'selected':''}" data-chip-value="${v}">${v}</button>`).join('')}
+          </div>
+        </div>
+        <div class="field">
+          <label>指示</label>
+          <input type="text" name="instruction" value="${escapeHtml(ev.instruction||'')}">
+          <div class="chip-group" data-chip-mode="append" data-chip-target="instruction">
+            ${instructionOptions.map(v=>`<button type="button" class="chip ${(ev.instruction||'').includes(v)?'selected':''}" data-chip-value="${v}">${v}</button>`).join('')}
+          </div>
+        </div>`;
+    default: return '';
+  }
+}
+
+// チップ操作：append=入力欄に「・」区切りで追加/削除、replace=単一選択で値を置換
+function bindChipHandlers(container){
+  container.querySelectorAll('.chip-group').forEach(group => {
+    const mode = group.dataset.chipMode;
+    const targetName = group.dataset.chipTarget;
+    const input = container.querySelector(`[name="${targetName}"]`);
+    if (!input) return;
+    group.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const val = chip.dataset.chipValue;
+        if (mode === 'replace'){
+          const wasSelected = chip.classList.contains('selected');
+          group.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+          if (!wasSelected){
+            chip.classList.add('selected');
+            input.value = val;
+          } else {
+            input.value = '';
+          }
+        } else {
+          let parts = input.value.split('・').map(s => s.trim()).filter(Boolean);
+          if (parts.includes(val)){
+            parts = parts.filter(p => p !== val);
+            chip.classList.remove('selected');
+          } else {
+            parts.push(val);
+            chip.classList.add('selected');
+          }
+          input.value = parts.join('・');
+        }
+      });
+    });
+  });
+}
+
+function renderEventForm(cowId, eventId, presetType){
+  let ev = null;
+  if (eventId){
+    ev = STATE.events.find(e => e.id === eventId);
+    if (!ev){ navigate('#/cows'); return; }
+    cowId = ev.cowId;
+  }
+  const cow = STATE.cows.find(c => c.id === cowId);
+  if (!cow){ navigate('#/cows'); return; }
+  const type = ev ? ev.type : (presetType && EVENT_TYPES[presetType] ? presetType : 'exam');
+
+  setHeader(ev ? 'イベントを編集' : 'イベントを記録', { back: true });
+  setMainHTML(`
+    <p class="page-lead">${escapeHtml(cow.name||'(名前未設定)')} <span class="tag-badge">${escapeHtml(cow.tagNo||cow.cowNo||'-')}</span></p>
+    <form data-form="event" data-cow-id="${cow.id}" data-event-id="${ev?ev.id:''}">
+      <div class="field">
+        <label>種別</label>
+        <select name="type" id="eventTypeSelect">
+          ${Object.entries(EVENT_TYPES).map(([k,v]) => `<option value="${k}" ${type===k?'selected':''}>${v.label}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>日付</label>
+        <input type="date" name="date" value="${ev ? ev.date : todayStr()}" required>
+      </div>
+      <div id="eventTypeFields">${fieldsForType(type, ev || {})}</div>
+      <div class="field">
+        <label>備考</label>
+        <textarea name="note">${escapeHtml(ev?.note||'')}</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">${iconSvg('save')} 保存する</button>
+      ${ev ? `<button type="button" class="btn btn-danger btn-block mt-8" data-action="delete-event" data-id="${ev.id}">この記録を削除する</button>` : ''}
+    </form>
+  `);
+  const form = document.querySelector('[data-form="event"]');
+  bindChipHandlers(form);
+  document.getElementById('eventTypeSelect').addEventListener('change', (e) => {
+    document.getElementById('eventTypeFields').innerHTML = fieldsForType(e.target.value, {});
+    bindChipHandlers(form);
+  });
+}
+
+/* =========================================================
+   農場 登録・編集フォーム
+   ========================================================= */
+function renderFarmForm(farmId){
+  const farm = farmId ? STATE.farms.find(f => f.id === farmId) : null;
+  setHeader(farm ? '農場名を編集' : '農場を追加', { back: true });
+  setMainHTML(`
+    <form data-form="farm" data-id="${farm?farm.id:''}">
+      <div class="field">
+        <label>農場名</label>
+        <input type="text" name="name" value="${escapeHtml(farm?.name||'')}" required placeholder="例：第一牧場">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">${iconSvg('save')} 保存する</button>
+      ${farm && STATE.farms.length > 1 ? `<button type="button" class="btn btn-danger btn-block mt-8" data-action="delete-farm" data-id="${farm.id}">この農場を削除する</button>` : ''}
+    </form>
+  `);
+}
+
+/* =========================================================
+   未授精リスト
+   条件：renderHome/getOpenAIList を参照
+   ========================================================= */
+function renderOpenAIList(){
+  setHeader('未授精リスト', { back: true });
+  const farmId = STATE.settings.activeFarmId;
+  const list = getOpenAIList(todayStr(), farmId);
+  setMainHTML(`
+    <p class="page-lead">${escapeHtml(activeFarmLabel())}／分娩後 ${STATE.settings.openAiThreshold}日以上で、まだ授精されていない牛（${list.length}頭）です。</p>
+    ${list.length === 0 ? `
+    <div class="empty-state">
+      <div class="empty-icon">${iconSvg('cow')}</div>
+      <p>対象の牛はいません。</p>
+    </div>` : list.map(s => renderOpenAITaskCard(s)).join('')}
+  `);
+}
+
+function lastExamSummaryRows(lastExam){
+  if (!lastExam) return `<div class="task-card__row text-muted">検診所見の記録はまだありません。</div>`;
+  const findings = [
+    lastExam.leftOvary ? '左卵巣：' + lastExam.leftOvary : null,
+    lastExam.rightOvary ? '右卵巣：' + lastExam.rightOvary : null,
+    lastExam.uterus ? '子宮：' + lastExam.uterus : null
+  ].filter(Boolean);
+  return `
+    <div class="task-card__row"><b>前回所見</b>（${formatDateJp(lastExam.date)}）：${findings.length ? escapeHtml(findings.join(' / ')) : '―'}</div>
+    <div class="task-card__row"><b>処置</b>：${escapeHtml(lastExam.treatment || '―')}</div>
+    <div class="task-card__row"><b>指示</b>：${escapeHtml(lastExam.instruction || '―')}</div>`;
+}
+
+function renderOpenAITaskCard(s){
+  const cow = s.cow;
+  return `
+  <div class="task-card">
+    <div class="task-card__head">
+      <div>
+        <div class="list-item__name">${escapeHtml(cow.name || '(名前未設定)')} <span class="tag-badge">${escapeHtml(cow.tagNo || cow.cowNo || '-')}</span></div>
+        <div class="list-item__meta">${escapeHtml(farmName(cow.farmId))}</div>
+      </div>
+      <div class="task-card__days">${s.daysSinceCalving}<span class="unit">日</span></div>
+    </div>
+    <div class="task-card__row"><b>分娩後日数</b>：${s.daysSinceCalving}日（最終分娩 ${formatDateJp(s.lastCalving.date)}・産次 ${s.parity}）</div>
+    ${lastExamSummaryRows(s.lastExam)}
+    <div class="task-card__actions">
+      <a class="btn btn-secondary" href="#/cow/${cow.id}">カルテを見る</a>
+      <a class="btn btn-primary" href="#/cow/${cow.id}/event/new/exam">所見・授精を入力</a>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   妊鑑リスト
+   条件：renderHome/getPregCheckList を参照
+   ========================================================= */
+function renderPregCheckList(){
+  setHeader('妊鑑リスト', { back: true });
+  const farmId = STATE.settings.activeFarmId;
+  const list = getPregCheckList(todayStr(), farmId);
+  setMainHTML(`
+    <p class="page-lead">${escapeHtml(activeFarmLabel())}／授精後 ${STATE.settings.pregCheckThreshold}日以上で、妊娠鑑定が未実施の牛（${list.length}頭）です。</p>
+    ${list.length === 0 ? `
+    <div class="empty-state">
+      <div class="empty-icon">${iconSvg('cow')}</div>
+      <p>対象の牛はいません。</p>
+    </div>` : list.map(s => renderPregCheckTaskCard(s)).join('')}
+  `);
+}
+
+function renderPregCheckTaskCard(s){
+  const cow = s.cow;
+  const ai = s.pendingAI;
+  const aiInfo = [ai.sire ? '種雄牛：' + ai.sire : null, ai.method ? ai.method : null].filter(Boolean).join('・');
+  return `
+  <div class="task-card">
+    <div class="task-card__head">
+      <div>
+        <div class="list-item__name">${escapeHtml(cow.name || '(名前未設定)')} <span class="tag-badge">${escapeHtml(cow.tagNo || cow.cowNo || '-')}</span></div>
+        <div class="list-item__meta">${escapeHtml(farmName(cow.farmId))}</div>
+      </div>
+      <div class="task-card__days">${s.daysSinceAI}<span class="unit">日</span></div>
+    </div>
+    <div class="task-card__row"><b>種付け後日数</b>：${s.daysSinceAI}日（${formatDateJp(ai.date)}${aiInfo ? '・' + escapeHtml(aiInfo) : ''}）</div>
+    <div class="task-card__row"><b>繁殖履歴</b>：産次 ${s.parity}${s.lastCalving ? '・最終分娩 ' + formatDateJp(s.lastCalving.date) : ''}</div>
+    ${lastExamSummaryRows(s.lastExam)}
+    <div class="task-card__actions">
+      <a class="btn btn-secondary" href="#/cow/${cow.id}">カルテを見る</a>
+      <a class="btn btn-primary" href="#/cow/${cow.id}/event/new/preg_check">鑑定結果を入力</a>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   設定画面
+   ========================================================= */
+function renderSettings(){
+  setHeader('設定');
+  const s = STATE.settings;
+  const farmId = s.activeFarmId;
+  const kpi = computeKPI(activeCows(farmId), todayStr());
+
+  setMainHTML(`
+    <div class="card">
+      <h3 class="section-title">表示する農場</h3>
+      <p class="page-lead">ホーム・牛一覧・各リストで対象とする農場を選びます。</p>
+      <div class="chip-group" id="activeFarmChips">
+        <button type="button" class="chip ${!farmId ? 'selected' : ''}" data-farm-id="">全農場</button>
+        ${STATE.farms.map(f => `<button type="button" class="chip ${farmId === f.id ? 'selected' : ''}" data-farm-id="${f.id}">${escapeHtml(f.name)}</button>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">農場の管理</h3>
+      <ul class="list">
+        ${STATE.farms.map(f => `
+        <li>
+          <a class="list-item" href="#/farm/${f.id}/edit">
+            <div class="list-item__main"><div class="list-item__name">${escapeHtml(f.name)}</div></div>
+            <span class="chevron"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+          </a>
+        </li>`).join('')}
+      </ul>
+      <a class="btn btn-ghost btn-block mt-8" href="#/farms/new">${iconSvg('plus')} 農場を追加</a>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">繁殖の定数・閾値</h3>
+      <form data-form="settings">
+        <div class="field-row">
+          <div class="field"><label>妊娠期間（日）</label><input type="number" name="gestationDays" value="${s.gestationDays}" min="1" inputmode="numeric"></div>
+          <div class="field"><label>VWP・待機期間（日）</label><input type="number" name="vwpDays" value="${s.vwpDays}" min="0" inputmode="numeric"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>発情周期（日）</label><input type="number" name="cycleDays" value="${s.cycleDays}" min="1" inputmode="numeric"></div>
+          <div class="field"><label>未授精リスト閾値（分娩後・日）</label><input type="number" name="openAiThreshold" value="${s.openAiThreshold}" min="0" inputmode="numeric"></div>
+        </div>
+        <div class="field">
+          <label>妊鑑リスト閾値（授精後・日）</label>
+          <input type="number" name="pregCheckThreshold" value="${s.pregCheckThreshold}" min="0" inputmode="numeric">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">${iconSvg('save')} 設定を保存</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">KPI検証</h3>
+      <p class="page-lead">v2でダッシュボード化予定の繁殖成績指標です。${escapeHtml(activeFarmLabel())}の在群${kpi.headCount}頭を対象に算出しています。各指標の定義はソースコード内のコメントを参照してください。</p>
+      <ul class="kpi-list">
+        <li><span class="kpi-name">頭数</span><span class="kpi-val">${kpi.headCount}頭</span></li>
+        <li><span class="kpi-name">平均産次</span><span class="kpi-val">${formatNum(kpi.avgParity, 1)}</span></li>
+        <li><span class="kpi-name">平均BCS</span><span class="kpi-val">${formatNum(kpi.avgBCS, 2)}</span></li>
+        <li><span class="kpi-name">初回授精日数</span><span class="kpi-val">${formatNum(kpi.daysToFirstAI, 1)}日</span></li>
+        <li><span class="kpi-name">実空胎日数</span><span class="kpi-val">${formatNum(kpi.actualOpenDays, 1)}日</span></li>
+        <li><span class="kpi-name">分娩間隔</span><span class="kpi-val">${formatNum(kpi.calvingInterval, 1)}日</span></li>
+        <li><span class="kpi-name">期待分娩間隔</span><span class="kpi-val">${formatNum(kpi.expectedCalvingInterval, 1)}日</span></li>
+        <li><span class="kpi-name">受胎あたり授精回数</span><span class="kpi-val">${formatNum(kpi.aiPerConception, 2)}回</span></li>
+        <li><span class="kpi-name">受胎率</span><span class="kpi-val">${formatNum(kpi.conceptionRate, 1)}%</span></li>
+        <li><span class="kpi-name">初回受胎率</span><span class="kpi-val">${formatNum(kpi.firstServiceConceptionRate, 1)}%</span></li>
+        <li><span class="kpi-name">発情発見率</span><span class="kpi-val">${formatNum(kpi.estrusDetectionRate, 1)}%</span></li>
+        <li><span class="kpi-name">妊娠率</span><span class="kpi-val">${formatNum(kpi.pregnancyRate, 1)}%</span></li>
+      </ul>
+    </div>
+
+    <a class="btn btn-secondary btn-block" href="#/backup">${iconSvg('download')} バックアップ／復元</a>
+  `);
+
+  document.getElementById('activeFarmChips').addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-farm-id]');
+    if (!btn) return;
+    STATE.settings.activeFarmId = btn.dataset.farmId || null;
+    await DB.put('settings', STATE.settings);
+    renderSettings();
+    updateBadges();
+  });
+}
+
+/* =========================================================
+   バックアップ（JSON書き出し/読み込み・CSV書き出し）
+   ========================================================= */
+function renderBackup(){
+  setHeader('バックアップ', { back: true });
+  setMainHTML(`
+    <div class="card">
+      <h3 class="section-title">書き出し（エクスポート）</h3>
+      <p class="page-lead">農場・牛・イベント・設定のすべてをJSONファイルとして書き出します。端末の変更前や、定期的なバックアップにご利用ください（iOSは保存領域を消去することがあります）。</p>
+      <button type="button" class="btn btn-primary btn-block" id="exportJsonBtn">${iconSvg('download')} 全データをJSONで書き出す</button>
+      <button type="button" class="btn btn-secondary btn-block mt-8" id="exportCowsCsvBtn">${iconSvg('download')} 牛マスタをCSVで書き出す</button>
+      <button type="button" class="btn btn-secondary btn-block mt-8" id="exportEventsCsvBtn">${iconSvg('download')} イベント履歴をCSVで書き出す</button>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">読み込み（復元）</h3>
+      <p class="page-lead">JSONファイルから全データを復元します。<b>現在端末内のデータはすべて置き換えられます。</b></p>
+      <label class="btn btn-ghost btn-block" for="importJsonInput" style="display:flex;align-items:center;justify-content:center;cursor:pointer;">${iconSvg('upload')} JSONファイルを選択して復元</label>
+      <input type="file" id="importJsonInput" accept="application/json,.json" class="hidden">
+    </div>
+  `);
+
+  document.getElementById('exportJsonBtn').addEventListener('click', exportJson);
+  document.getElementById('exportCowsCsvBtn').addEventListener('click', exportCowsCsv);
+  document.getElementById('exportEventsCsvBtn').addEventListener('click', exportEventsCsv);
+  document.getElementById('importJsonInput').addEventListener('change', importJson);
+}
+
+function downloadFile(filename, content, mime){
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportJson(){
+  const data = {
+    app: 'hanshoku-junkai',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    farms: STATE.farms,
+    cows: STATE.cows,
+    events: STATE.events,
+    settings: STATE.settings
+  };
+  downloadFile(`hanshoku-junkai-backup-${todayStr()}.json`, JSON.stringify(data, null, 2), 'application/json');
+  showToast('JSONを書き出しました');
+}
+
+function csvEscape(v){
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function exportCowsCsv(){
+  const header = ['id','farmId','farmName','name','tagNo','cowNo','kyosaiNo','birthDate','status','note'];
+  const rows = STATE.cows.map(c => [c.id, c.farmId, farmName(c.farmId), c.name, c.tagNo, c.cowNo, c.kyosaiNo, c.birthDate, c.status, c.note]);
+  const csv = [header, ...rows].map(r => r.map(csvEscape).join(',')).join('\r\n');
+  downloadFile(`cows-${todayStr()}.csv`, '\uFEFF' + csv, 'text/csv');
+  showToast('牛マスタCSVを書き出しました');
+}
+
+function exportEventsCsv(){
+  const header = ['id','cowId','cowName','cowTagNo','date','type','typeLabel','sire','method','semenType','result','leftOvary','rightOvary','uterus','bcs','treatment','instruction','note'];
+  const rows = STATE.events.slice()
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .map(e => {
+      const cow = STATE.cows.find(c => c.id === e.cowId);
+      return [e.id, e.cowId, cow ? cow.name : '', cow ? cow.tagNo : '', e.date, e.type, (EVENT_TYPES[e.type] || {}).label || '',
+        e.sire, e.method, e.semenType, e.result, e.leftOvary, e.rightOvary, e.uterus, e.bcs, e.treatment, e.instruction, e.note];
+    });
+  const csv = [header, ...rows].map(r => r.map(csvEscape).join(',')).join('\r\n');
+  downloadFile(`events-${todayStr()}.csv`, '\uFEFF' + csv, 'text/csv');
+  showToast('イベント履歴CSVを書き出しました');
+}
+
+async function importJson(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!confirm('現在端末内のデータをすべて置き換えます。元に戻せません。よろしいですか？')){
+    e.target.value = '';
+    return;
+  }
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!data || !Array.isArray(data.farms) || !Array.isArray(data.cows) || !Array.isArray(data.events)){
+      throw new Error('ファイルの形式が正しくありません');
+    }
+    await DB.clear('farms');
+    await DB.clear('cows');
+    await DB.clear('events');
+    await DB.clear('settings');
+    for (const f of data.farms) await DB.put('farms', f);
+    for (const c of data.cows) await DB.put('cows', c);
+    for (const ev of data.events) await DB.put('events', ev);
+    const settings = data.settings ? { ...DEFAULT_SETTINGS, ...data.settings } : { ...DEFAULT_SETTINGS };
+    await DB.put('settings', settings);
+    await loadAll();
+    showToast('データを復元しました');
+    if (location.hash === '#/home'){ route(); } else { location.hash = '#/home'; }
+    updateBadges();
+  } catch (err){
+    alert('読み込みに失敗しました：' + err.message);
+  } finally {
+    e.target.value = '';
+  }
+}
+
+/* =========================================================
+   フォーム送信・操作ボタンの委譲ハンドラ
+   ========================================================= */
+async function handleCowFormSubmit(form){
+  const fd = new FormData(form);
+  const id = form.dataset.id || uid();
+  const isNew = !form.dataset.id;
+  const cow = {
+    id,
+    farmId: fd.get('farmId') || (STATE.farms[0] && STATE.farms[0].id) || '',
+    name: (fd.get('name') || '').trim(),
+    tagNo: (fd.get('tagNo') || '').trim(),
+    cowNo: (fd.get('cowNo') || '').trim(),
+    kyosaiNo: (fd.get('kyosaiNo') || '').trim(),
+    birthDate: fd.get('birthDate') || '',
+    status: fd.get('status') || '在群',
+    note: (fd.get('note') || '').trim()
+  };
+  await DB.put('cows', cow);
+  const idx = STATE.cows.findIndex(c => c.id === id);
+  if (idx >= 0) STATE.cows[idx] = cow; else STATE.cows.push(cow);
+  showToast(isNew ? '牛を登録しました' : '保存しました');
+  location.hash = `#/cow/${id}`;
+}
+
+async function handleEventFormSubmit(form){
+  const fd = new FormData(form);
+  const cowId = form.dataset.cowId;
+  const eventId = form.dataset.eventId || null;
+  const type = fd.get('type');
+  const ev = {
+    id: eventId || uid(),
+    cowId,
+    date: fd.get('date') || todayStr(),
+    type,
+    note: (fd.get('note') || '').trim()
+  };
+  switch (type){
+    case 'AI':
+      ev.sire = (fd.get('sire') || '').trim();
+      ev.method = fd.get('method') || 'AI';
+      ev.semenType = (fd.get('semenType') || '').trim();
+      break;
+    case 'preg_check':
+      ev.result = fd.get('result') || '妊娠';
+      break;
+    case 'exam':
+      ev.leftOvary = (fd.get('leftOvary') || '').trim();
+      ev.rightOvary = (fd.get('rightOvary') || '').trim();
+      ev.uterus = (fd.get('uterus') || '').trim();
+      ev.bcs = fd.get('bcs') !== null && fd.get('bcs') !== '' ? Number(fd.get('bcs')) : null;
+      ev.treatment = (fd.get('treatment') || '').trim();
+      ev.instruction = (fd.get('instruction') || '').trim();
+      break;
+    case 'calving':
+    case 'dry_off':
+    default:
+      break;
+  }
+  await DB.put('events', ev);
+  const idx = STATE.events.findIndex(e2 => e2.id === ev.id);
+  if (idx >= 0) STATE.events[idx] = ev; else STATE.events.push(ev);
+  showToast('記録しました');
+  if (location.hash === `#/cow/${cowId}`) route();
+  else location.hash = `#/cow/${cowId}`;
+}
+
+async function handleFarmFormSubmit(form){
+  const fd = new FormData(form);
+  const id = form.dataset.id || uid();
+  const farm = { id, name: (fd.get('name') || '').trim() || '（名称未設定）' };
+  await DB.put('farms', farm);
+  const idx = STATE.farms.findIndex(f => f.id === id);
+  if (idx >= 0) STATE.farms[idx] = farm; else STATE.farms.push(farm);
+  showToast('保存しました');
+  if (location.hash === '#/settings') route();
+  else location.hash = '#/settings';
+}
+
+async function handleSettingsFormSubmit(form){
+  const fd = new FormData(form);
+  ['gestationDays', 'vwpDays', 'cycleDays', 'openAiThreshold', 'pregCheckThreshold'].forEach(key => {
+    const v = Number(fd.get(key));
+    if (!isNaN(v) && v >= 0) STATE.settings[key] = v;
+  });
+  await DB.put('settings', STATE.settings);
+  showToast('設定を保存しました');
+  renderSettings();
+  updateBadges();
+}
+
+document.addEventListener('submit', (e) => {
+  const form = e.target;
+  const kind = form.dataset.form;
+  if (!kind) return;
+  e.preventDefault();
+  if (kind === 'cow') handleCowFormSubmit(form);
+  else if (kind === 'event') handleEventFormSubmit(form);
+  else if (kind === 'farm') handleFarmFormSubmit(form);
+  else if (kind === 'settings') handleSettingsFormSubmit(form);
+});
+
+document.addEventListener('click', async (e) => {
+  const navBtn = e.target.closest('[data-nav]');
+  if (navBtn){
+    e.preventDefault();
+    location.hash = navBtn.dataset.nav;
+    return;
+  }
+  const actionBtn = e.target.closest('[data-action]');
+  if (!actionBtn) return;
+  const action = actionBtn.dataset.action;
+  const id = actionBtn.dataset.id;
+
+  if (action === 'delete-cow'){
+    if (!confirm('この牛のマスタ情報と、関連するすべての記録を削除します。よろしいですか？')) return;
+    const relatedEvents = STATE.events.filter(ev => ev.cowId === id);
+    for (const ev of relatedEvents) await DB.delete('events', ev.id);
+    STATE.events = STATE.events.filter(ev => ev.cowId !== id);
+    await DB.delete('cows', id);
+    STATE.cows = STATE.cows.filter(c => c.id !== id);
+    showToast('牛を削除しました');
+    if (location.hash === '#/cows') route();
+    else location.hash = '#/cows';
+
+  } else if (action === 'delete-event'){
+    if (!confirm('この記録を削除します。よろしいですか？')) return;
+    const ev = STATE.events.find(e2 => e2.id === id);
+    await DB.delete('events', id);
+    STATE.events = STATE.events.filter(e2 => e2.id !== id);
+    showToast('記録を削除しました');
+    if (ev && location.hash !== `#/cow/${ev.cowId}`) location.hash = `#/cow/${ev.cowId}`;
+    else route();
+
+  } else if (action === 'delete-farm'){
+    if (STATE.farms.length <= 1){
+      alert('最後の農場は削除できません。');
+      return;
+    }
+    const hasCows = STATE.cows.some(c => c.farmId === id);
+    if (hasCows){
+      alert('この農場に所属する牛がいるため削除できません。先に牛の所属農場を変更してください。');
+      return;
+    }
+    if (!confirm('この農場を削除します。よろしいですか？')) return;
+    await DB.delete('farms', id);
+    STATE.farms = STATE.farms.filter(f => f.id !== id);
+    if (STATE.settings.activeFarmId === id){
+      STATE.settings.activeFarmId = null;
+      await DB.put('settings', STATE.settings);
+    }
+    showToast('農場を削除しました');
+    if (location.hash === '#/settings') route();
+    else location.hash = '#/settings';
+  }
+});
+
+document.getElementById('backBtn').addEventListener('click', () => {
+  if (window.history.length > 1) window.history.back();
+  else location.hash = '#/home';
+});
+
+/* =========================================================
+   オフライン表示
+   ========================================================= */
+function updateOfflineBanner(){
+  document.getElementById('offlineBanner').classList.toggle('show', !navigator.onLine);
+}
+window.addEventListener('online', updateOfflineBanner);
+window.addEventListener('offline', updateOfflineBanner);
+
+/* =========================================================
+   アプリ初期化
+   ========================================================= */
+window.addEventListener('hashchange', route);
+
+document.addEventListener('DOMContentLoaded', async () => {
+  updateOfflineBanner();
+  await loadAll();
+  if (!location.hash){
+    location.hash = '#/home';
+  } else {
+    route();
+  }
+
+  if ('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(() => {
+      // オフライン環境などで登録に失敗しても、アプリ自体は動作を継続する
+    });
+  }
+});
+
+</script>
+</body>
+</html>
