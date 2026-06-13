@@ -436,6 +436,7 @@ const DEFAULT_SETTINGS = {
   cycleDays: 21,
   openAiThreshold: 40,
   pregCheckThreshold: 28,
+  firstBreedingAgeDays: 390, // 未経産牛のJMR算出に使う「初回授精目標日齢」
   activeFarmId: null // null = 全農場
 };
 
@@ -727,7 +728,95 @@ function buildCyclesForCow(cow, asOf){
   return cycles;
 }
 
-// cows: KPI集計対象の牛（通常は activeCows() の結果。淘汰牛も含めたい場合は呼び出し側で調整）
+/* ---------------------------------------------------------
+   JMR（Jours Moyen Retard：繁殖再開遅延ペナルティー）
+   ----------------------------------------------------------
+   牧場ごとの「繁殖を再開すべき目安日」を起点に、それを超えた日数分だけ
+   1日1ペナルティを加算していく考え方。
+
+     ・経産牛（分娩歴あり）
+         起点 ＝ 最終分娩日
+         目安日数 ＝ VWP（任意授精待機期間／設定値 vwpDays）
+         例：初回授精日数の目標が40日ならVWP=40とする
+
+     ・未経産牛（分娩歴なし）
+         起点 ＝ 生年月日
+         目安日数 ＝ 初回授精目標日齢（設定値 firstBreedingAgeDays、既定390日）
+
+   ペナルティの加算・保留・リセットのルール：
+     ・起点＋目安日数（＝しきい値の日）を1日超過するごとに +1
+     ・授精（AI）を実施すると、その時点でペナルティの加算を保留する
+     ・妊娠鑑定が「妊娠」の場合：ペナルティを0にリセットし、
+       このサイクルでは加算を再開しない
+     ・妊娠鑑定が「不妊」「再検」の場合：保留していたペナルティはそのまま
+       確定（加算済みとして残る）し、その時点から加算を再開する
+
+   ・しきい値の日に達していない（VWP／日齢の範囲内）場合は penalty=0
+   ・分娩歴も生年月日も無い牛は算出対象外（inScope=false）
+   --------------------------------------------------------- */
+function computeCowJMRPenalty(cow, asOf){
+  asOf = asOf || todayStr();
+  const s = STATE.settings;
+  const events = eventsForCow(cow.id);
+  const calvings = events.filter(e => e.type === 'calving');
+  const lastCalving = calvings.length ? calvings[calvings.length - 1] : null;
+
+  let baseDate, thresholdDays, basis;
+  if (lastCalving){
+    baseDate = lastCalving.date;
+    thresholdDays = s.vwpDays;
+    basis = 'calving';
+  } else if (cow.birthDate){
+    baseDate = cow.birthDate;
+    thresholdDays = s.firstBreedingAgeDays;
+    basis = 'age';
+  } else {
+    return { penalty: 0, inScope: false, basis: null };
+  }
+
+  const thresholdDate = addDaysToStr(baseDate, thresholdDays);
+  if (asOf <= thresholdDate){
+    // VWP（または初回授精目標日齢）の範囲内 → ペナルティ0
+    return { penalty: 0, inScope: true, basis };
+  }
+
+  // しきい値の日より後のAI・妊娠鑑定イベントのみを時系列で処理する
+  const relevantEvents = events
+    .filter(e => e.date > baseDate && (e.type === 'AI' || e.type === 'preg_check') && e.date <= asOf)
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  let penalty = 0;
+  let accumulating = true;   // true：日数経過に応じてペナルティを加算中
+  let cursor = thresholdDate; // ここまでは計算済み（保留中は日付だけ進める）
+
+  relevantEvents.forEach(ev => {
+    if (accumulating && ev.date > cursor){
+      penalty += diffDays(cursor, ev.date);
+      cursor = ev.date;
+    } else if (ev.date > cursor){
+      cursor = ev.date;
+    }
+
+    if (ev.type === 'AI'){
+      accumulating = false; // 授精時点で加算を保留
+    } else if (ev.type === 'preg_check'){
+      if (ev.result === '妊娠'){
+        penalty = 0;
+        accumulating = false; // 妊娠確定 → このサイクルでは終了
+      } else {
+        accumulating = true; // 不妊・再検 → 保留分を確定し、加算を再開
+      }
+    }
+  });
+
+  if (accumulating){
+    penalty += Math.max(0, diffDays(cursor, asOf));
+  }
+
+  return { penalty, inScope: true, basis };
+}
+
+
 function computeKPI(cows, asOf){
   asOf = asOf || todayStr();
   const s = STATE.settings;
@@ -790,6 +879,18 @@ function computeKPI(cows, asOf){
   const parities = cows.map(c => computeCowSnapshot(c, asOf).parity);
   const bcsList = cows.map(c => computeCowSnapshot(c, asOf).bcs).filter(v => v !== null && v !== undefined);
 
+  // JMR（牛群全体 / 不受胎牛）
+  // 牛群総ペナルティ数 ÷ 牛群総頭数、および ÷ 不受胎牛（ペナルティ>0）頭数
+  let jmrTotalPenalty = 0;
+  let jmrNonPregnantCount = 0;
+  cows.forEach(cow => {
+    const r = computeCowJMRPenalty(cow, asOf);
+    jmrTotalPenalty += r.penalty;
+    if (r.penalty > 0) jmrNonPregnantCount += 1;
+  });
+  const jmrHerd = cows.length > 0 ? (jmrTotalPenalty / cows.length) : null;
+  const jmrNonPregnant = jmrNonPregnantCount > 0 ? (jmrTotalPenalty / jmrNonPregnantCount) : null;
+
   return {
     headCount: cows.length,
     avgParity: avg(parities),
@@ -803,8 +904,10 @@ function computeKPI(cows, asOf){
     firstServiceConceptionRate: firstServiceCows > 0 ? (firstServiceConceptions/firstServiceCows*100) : null,
     estrusDetectionRate,
     pregnancyRate,
+    jmrHerd,
+    jmrNonPregnant,
     // 検証用の生カウント
-    _raw: { totalAIServices, totalConceptions, firstServiceCows, firstServiceConceptions, expectedEstrusSum, actualEstrusAISum }
+    _raw: { totalAIServices, totalConceptions, firstServiceCows, firstServiceConceptions, expectedEstrusSum, actualEstrusAISum, jmrTotalPenalty, jmrNonPregnantCount }
   };
 }
 
@@ -1544,12 +1647,19 @@ function renderSettings(){
           <label>妊鑑リスト閾値（授精後・日）</label>
           <input type="number" name="pregCheckThreshold" value="${s.pregCheckThreshold}" min="0" inputmode="numeric">
         </div>
+        <div class="field">
+          <label>初回授精目標日齢（未経産牛・日）</label>
+          <input type="number" name="firstBreedingAgeDays" value="${s.firstBreedingAgeDays}" min="1" inputmode="numeric">
+        </div>
         <button type="submit" class="btn btn-primary btn-block">${iconSvg('save')} 設定を保存</button>
       </form>
     </div>
 
     <div class="card">
       <h3 class="section-title">KPI検証</h3>
+      ${kpi.headCount === 0 ? `
+      <p class="page-lead">${escapeHtml(activeFarmLabel())}には、まだ牛が登録されていません。牛を登録し、イベント（分娩・授精など）を記録すると、ここに繁殖成績の指標が表示されます。</p>
+      ` : `
       <p class="page-lead">v2でダッシュボード化予定の繁殖成績指標です。${escapeHtml(activeFarmLabel())}の在群${kpi.headCount}頭を対象に算出しています。各指標の定義はソースコード内のコメントを参照してください。</p>
       <ul class="kpi-list">
         <li><span class="kpi-name">頭数</span><span class="kpi-val">${kpi.headCount}頭</span></li>
@@ -1564,7 +1674,10 @@ function renderSettings(){
         <li><span class="kpi-name">初回受胎率</span><span class="kpi-val">${formatNum(kpi.firstServiceConceptionRate, 1)}%</span></li>
         <li><span class="kpi-name">発情発見率</span><span class="kpi-val">${formatNum(kpi.estrusDetectionRate, 1)}%</span></li>
         <li><span class="kpi-name">妊娠率</span><span class="kpi-val">${formatNum(kpi.pregnancyRate, 1)}%</span></li>
+        <li><span class="kpi-name">JMR（牛群全体）</span><span class="kpi-val">${formatNum(kpi.jmrHerd, 2)}</span></li>
+        <li><span class="kpi-name">JMR（不受胎牛）</span><span class="kpi-val">${formatNum(kpi.jmrNonPregnant, 2)}</span></li>
       </ul>
+      `}
     </div>
 
     <a class="btn btn-secondary btn-block" href="#/backup">${iconSvg('download')} バックアップ／復元</a>
@@ -1590,6 +1703,7 @@ function renderBackup(){
       <h3 class="section-title">書き出し（エクスポート）</h3>
       <p class="page-lead">農場・牛・イベント・設定のすべてをJSONファイルとして書き出します。端末の変更前や、定期的なバックアップにご利用ください（iOSは保存領域を消去することがあります）。</p>
       <button type="button" class="btn btn-primary btn-block" id="exportJsonBtn">${iconSvg('download')} 全データをJSONで書き出す</button>
+      <button type="button" class="btn btn-secondary btn-block mt-8" id="exportLedgerCsvBtn">${iconSvg('download')} 繁殖台帳CSVを書き出す（現在の状況・JMR含む）</button>
       <button type="button" class="btn btn-secondary btn-block mt-8" id="exportCowsCsvBtn">${iconSvg('download')} 牛マスタをCSVで書き出す</button>
       <button type="button" class="btn btn-secondary btn-block mt-8" id="exportEventsCsvBtn">${iconSvg('download')} イベント履歴をCSVで書き出す</button>
     </div>
@@ -1603,6 +1717,7 @@ function renderBackup(){
   `);
 
   document.getElementById('exportJsonBtn').addEventListener('click', exportJson);
+  document.getElementById('exportLedgerCsvBtn').addEventListener('click', exportLedgerCsv);
   document.getElementById('exportCowsCsvBtn').addEventListener('click', exportCowsCsv);
   document.getElementById('exportEventsCsvBtn').addEventListener('click', exportEventsCsv);
   document.getElementById('importJsonInput').addEventListener('change', importJson);
@@ -1639,6 +1754,43 @@ function csvEscape(v){
   const s = String(v);
   if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
+}
+
+// 繁殖台帳CSV：個体ごとの現在の繁殖ステータス（カルテ相当）＋JMRペナルティを書き出す
+function exportLedgerCsv(){
+  const asOf = todayStr();
+  const header = [
+    '農場','識別番号(耳標)','牛番号','名前','状態','産次','BCS',
+    '最終分娩日','分娩後日数','最終授精日','種付け後日数','妊否',
+    '分娩予定日','乾乳予定日','JMRペナルティ','備考'
+  ];
+  const rows = STATE.cows.slice()
+    .sort((a, b) => (a.tagNo || '').localeCompare(b.tagNo || '', 'ja'))
+    .map(cow => {
+      const snap = computeCowSnapshot(cow, asOf);
+      const jmr = computeCowJMRPenalty(cow, asOf);
+      return [
+        farmName(cow.farmId),
+        cow.tagNo,
+        cow.cowNo,
+        cow.name,
+        cow.status,
+        snap.parity,
+        snap.bcs !== null && snap.bcs !== undefined ? snap.bcs : '',
+        snap.lastCalving ? snap.lastCalving.date : '',
+        snap.daysSinceCalving !== null ? snap.daysSinceCalving : '',
+        snap.lastAISinceRef ? snap.lastAISinceRef.date : '',
+        snap.daysSinceAI !== null ? snap.daysSinceAI : '',
+        snap.pregStatus,
+        snap.expectedCalvingDate || '',
+        snap.expectedDryOffDate || '',
+        jmr.inScope ? jmr.penalty : '',
+        cow.note
+      ];
+    });
+  const csv = [header, ...rows].map(r => r.map(csvEscape).join(',')).join('\r\n');
+  downloadFile(`hanshoku-ledger-${asOf}.csv`, '\uFEFF' + csv, 'text/csv');
+  showToast('繁殖台帳CSVを書き出しました');
 }
 
 function exportCowsCsv(){
@@ -1777,7 +1929,7 @@ async function handleFarmFormSubmit(form){
 
 async function handleSettingsFormSubmit(form){
   const fd = new FormData(form);
-  ['gestationDays', 'vwpDays', 'cycleDays', 'openAiThreshold', 'pregCheckThreshold'].forEach(key => {
+  ['gestationDays', 'vwpDays', 'cycleDays', 'openAiThreshold', 'pregCheckThreshold', 'firstBreedingAgeDays'].forEach(key => {
     const v = Number(fd.get(key));
     if (!isNaN(v) && v >= 0) STATE.settings[key] = v;
   });
